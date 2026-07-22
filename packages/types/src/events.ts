@@ -103,6 +103,20 @@ export const VendorVerifiedPayload = z.object({
 });
 export type VendorVerifiedPayload = z.infer<typeof VendorVerifiedPayload>;
 
+export const VendorCreatedPayload = z.object({
+  vendorId: z.string().uuid(),
+  name: z.string(),
+  gstin: z.string().optional(),
+  createdBy: z.string().uuid(),
+});
+export type VendorCreatedPayload = z.infer<typeof VendorCreatedPayload>;
+
+export const VendorUpdatedPayload = z.object({
+  vendorId: z.string().uuid(),
+  changes: z.record(z.unknown()),
+});
+export type VendorUpdatedPayload = z.infer<typeof VendorUpdatedPayload>;
+
 export const ApprovalRequestedPayload = z.object({
   approvalId: z.string().uuid(),
   entityType: z.enum(["invoice", "payment", "vendor", "budget"]),
@@ -168,6 +182,15 @@ export const PaymentCompletedPayload = z.object({
 });
 export type PaymentCompletedPayload = z.infer<typeof PaymentCompletedPayload>;
 
+export const PaymentFailedPayload = z.object({
+  paymentId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  amount: z.number(),
+  currency: z.string().length(3),
+  failureReason: z.string(),
+});
+export type PaymentFailedPayload = z.infer<typeof PaymentFailedPayload>;
+
 export const GSTVerifiedPayload = z.object({
   vendorId: z.string().uuid(),
   gstin: z.string(),
@@ -213,6 +236,8 @@ export const EventPayloadSchemas = {
   [DomainEventType.OCRCompleted]: OCRCompletedPayload,
   [DomainEventType.InvoiceMatched]: InvoiceMatchedPayload,
   [DomainEventType.VendorVerified]: VendorVerifiedPayload,
+  [DomainEventType.VendorCreated]: VendorCreatedPayload,
+  [DomainEventType.VendorUpdated]: VendorUpdatedPayload,
   [DomainEventType.ApprovalRequested]: ApprovalRequestedPayload,
   [DomainEventType.ApprovalGranted]: ApprovalGrantedPayload,
   [DomainEventType.ApprovalRejected]: ApprovalRejectedPayload,
@@ -220,6 +245,7 @@ export const EventPayloadSchemas = {
   [DomainEventType.RiskDetected]: RiskDetectedPayload,
   [DomainEventType.PaymentScheduled]: PaymentScheduledPayload,
   [DomainEventType.PaymentCompleted]: PaymentCompletedPayload,
+  [DomainEventType.PaymentFailed]: PaymentFailedPayload,
   [DomainEventType.GSTVerified]: GSTVerifiedPayload,
   [DomainEventType.ReminderTriggered]: ReminderTriggeredPayload,
   [DomainEventType.WebhookFailed]: WebhookFailedPayload,

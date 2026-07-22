@@ -29,6 +29,9 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^5.1.0
         version: 5.2.6
+      '@pazy-pro/ai':
+        specifier: workspace:*
+        version: link:../../libs/ai
       '@pazy-pro/database':
         specifier: workspace:*
         version: link:../../libs/database
@@ -38,12 +41,18 @@ importers:
       '@pazy-pro/logging':
         specifier: workspace:*
         version: link:../../libs/logging
+      '@pazy-pro/payment-engine':
+        specifier: workspace:*
+        version: link:../../services/payment-engine
       '@pazy-pro/types':
         specifier: workspace:*
         version: link:../../packages/types
       bullmq:
         specifier: ^5.13.2
         version: 5.80.10
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
       fastify:
         specifier: ^5.0.0
         version: 5.10.0
@@ -125,6 +134,22 @@ importers:
         specifier: ^2.1.2
         version: 2.1.9(@types/node@22.20.1)(terser@5.49.0)
 
+  libs/ai:
+    dependencies:
+      '@pazy-pro/database':
+        specifier: workspace:*
+        version: link:../database
+      '@pazy-pro/logging':
+        specifier: workspace:*
+        version: link:../logging
+      '@pazy-pro/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   libs/database:
     dependencies:
       '@prisma/client':
@@ -180,6 +205,25 @@ importers:
       zod:
         specifier: ^3.23.8
         version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  services/payment-engine:
+    dependencies:
+      '@pazy-pro/database':
+        specifier: workspace:*
+        version: link:../../libs/database
+      '@pazy-pro/events':
+        specifier: workspace:*
+        version: link:../../libs/events
+      '@pazy-pro/logging':
+        specifier: workspace:*
+        version: link:../../libs/logging
+      '@pazy-pro/types':
+        specifier: workspace:*
+        version: link:../../packages/types
     devDependencies:
       typescript:
         specifier: ^5.6.3
@@ -2343,6 +2387,10 @@ packages:
   dot-prop@10.2.0:
     resolution: {integrity: sha512-BTJ9aZYL3vCfZlZOBLy9v8TUqWGQ0pzFnygKwFZt5udj6viBoFIBviKPUoZLDCPn1FoXffv6McQFDenrm5Krfw==}
     engines: {node: '>=20'}
+
+  dotenv@16.6.1:
+    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
 
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
@@ -6864,6 +6912,8 @@ snapshots:
   dot-prop@10.2.0:
     dependencies:
       type-fest: 5.8.0
+
+  dotenv@16.6.1: {}
 
   dotenv@17.4.2: {}
 

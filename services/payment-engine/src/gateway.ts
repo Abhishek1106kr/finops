@@ -31,7 +31,7 @@ export class PazyPayGateway {
 
   selectRail(amount: number): RailType {
     if (amount <= 200_000) return "imps"; // instant, small-value
-    if (amount <= 1_000_000_00) return "neft"; // batched settlement windows
+    if (amount <= 1_000_000) return "neft"; // batched settlement windows
     return "rtgs"; // large-value, real-time gross settlement
   }
 

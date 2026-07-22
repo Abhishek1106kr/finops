@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@pazy-pro/database";
 import { DomainEventType } from "@pazy-pro/types";
 import { publishEvent } from "@pazy-pro/events";
+import { schedulePaymentForInvoice } from "./payments";
 
 const ApprovalResponse = z.object({
   id: z.string().uuid(),
@@ -94,6 +95,17 @@ export const approvalRoutes: FastifyPluginAsync = async (app) => {
           actor: { type: "user", id: DEMO_USER_ID },
         },
       );
+
+      // Single-tier approval today (skills.md's multi-tier chain is a
+      // follow-up): granting an invoice approval is final, so it moves
+      // straight to approved and auto-schedules the payout.
+      if (approval.entityType === "invoice" && approval.invoiceId) {
+        await prisma.invoice.update({
+          where: { id: approval.invoiceId },
+          data: { status: "approved" },
+        });
+        await schedulePaymentForInvoice(approval.invoiceId, DEMO_USER_ID);
+      }
 
       return {
         success: true as const,

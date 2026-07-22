@@ -3,7 +3,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { prisma } from "@pazy-pro/database";
 import { DomainEventType } from "@pazy-pro/types";
-import { publishEvent } from "@pazy-pro/events";
+import { publishEvent, getQueue, QueueName } from "@pazy-pro/events";
 
 const VendorResponse = z.object({
   id: z.string().uuid(),
@@ -111,6 +111,12 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
           companyId: DEMO_COMPANY_ID,
           actor: { type: "user", id: DEMO_USER_ID },
         },
+      );
+
+      await getQueue(QueueName.VendorVerification).add(
+        "verify",
+        { vendorId: vendor.id },
+        { jobId: `verify:${vendor.id}` },
       );
 
       reply.status(201);
