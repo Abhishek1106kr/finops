@@ -1,0 +1,438 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector, pgcrypto]
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Company Intelligence Graph
+// Company → Department → Employee → Budget → PO → Invoice → Payment → Vendor
+// Every model carries created_at/updated_at/deleted_at/created_by per
+// CLAUDE.md §Database Integrity. No orphan records: FKs are mandatory.
+// ─────────────────────────────────────────────────────────────────────────
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  legalName   String
+  gstin       String?
+  baseCurrency String  @default("INR")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String   @map("created_by")
+
+  departments      Department[]
+  vendors          Vendor[]
+  invoices         Invoice[]
+  budgets          Budget[]
+  contracts        Contract[]
+  corporateCards   CorporateCard[]
+  taxSchedules     TaxSchedule[]
+  auditLogs        AuditLog[]
+  knowledgeNodes   KnowledgeGraphNode[]
+
+  @@map("companies")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  costCenter String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String   @map("created_by")
+
+  company   Company   @relation(fields: [companyId], references: [id])
+  employees Employee[]
+  budgets   Budget[]
+
+  @@index([companyId])
+  @@map("departments")
+}
+
+model Employee {
+  id           String   @id @default(uuid())
+  departmentId String   @map("department_id")
+  fullName     String
+  email        String   @unique
+  role         String
+  isApprover   Boolean  @default(false) @map("is_approver")
+  approvalTier Int?     @map("approval_tier")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdBy    String   @map("created_by")
+
+  department Department @relation(fields: [departmentId], references: [id])
+  approvals  Approval[]
+
+  @@index([departmentId])
+  @@map("employees")
+}
+
+model Budget {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  departmentId  String   @map("department_id")
+  fiscalPeriod  String   @map("fiscal_period")
+  allocated     Decimal  @db.Decimal(18, 2)
+  spent         Decimal  @default(0) @db.Decimal(18, 2)
+  thresholdPct  Decimal  @default(0.9) @map("threshold_pct") @db.Decimal(4, 3)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String   @map("created_by")
+
+  company    Company    @relation(fields: [companyId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([departmentId, fiscalPeriod])
+  @@index([companyId])
+  @@map("budgets")
+}
+
+model PurchaseOrder {
+  id        String   @id @default(uuid())
+  budgetId  String   @map("budget_id")
+  vendorId  String   @map("vendor_id")
+  poNumber  String   @unique @map("po_number")
+  amount    Decimal  @db.Decimal(18, 2)
+  currency  String   @default("INR")
+  status    String   @default("open")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String   @map("created_by")
+
+  budget   Budget    @relation(fields: [budgetId], references: [id])
+  vendor   Vendor    @relation(fields: [vendorId], references: [id])
+  invoices Invoice[]
+
+  @@index([budgetId])
+  @@index([vendorId])
+  @@map("purchase_orders")
+}
+
+model Vendor {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  name         String
+  gstin        String?
+  pan          String?
+  riskScore    Decimal? @map("risk_score") @db.Decimal(4, 3)
+  blacklisted  Boolean  @default(false)
+  status       String   @default("pending_verification")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdBy    String   @map("created_by")
+
+  company        Company             @relation(fields: [companyId], references: [id])
+  bankAccounts   VendorBankAccount[]
+  contracts      Contract[]
+  invoices       Invoice[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([companyId])
+  @@map("vendors")
+}
+
+model VendorBankAccount {
+  id            String   @id @default(uuid())
+  vendorId      String   @map("vendor_id")
+  accountNumber String   @map("account_number")
+  ifsc          String
+  isPrimary     Boolean  @default(true) @map("is_primary")
+  verified      Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String   @map("created_by")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId])
+  @@map("vendor_bank_accounts")
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  vendorId    String   @map("vendor_id")
+  title       String
+  startDate   DateTime @map("start_date")
+  endDate     DateTime? @map("end_date")
+  autoRenew   Boolean  @default(false) @map("auto_renew")
+  fileUrl     String   @map("file_url")
+  embeddingId String?  @map("embedding_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String   @map("created_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  vendor  Vendor  @relation(fields: [vendorId], references: [id])
+
+  @@index([companyId])
+  @@index([vendorId])
+  @@map("contracts")
+}
+
+model Invoice {
+  id              String    @id @default(uuid())
+  companyId       String    @map("company_id")
+  vendorId        String?   @map("vendor_id")
+  purchaseOrderId String?   @map("purchase_order_id")
+  status          String    @default("uploaded")
+  invoiceNumber   String?   @map("invoice_number")
+  currency        String    @default("INR")
+  totalAmount     Decimal   @default(0) @map("total_amount") @db.Decimal(18, 2)
+  dueDate         DateTime? @map("due_date")
+  fileUrl         String    @map("file_url")
+  fileHash        String    @map("file_hash")
+  ocrConfidence   Decimal?  @map("ocr_confidence") @db.Decimal(4, 3)
+  riskScore       Decimal?  @map("risk_score") @db.Decimal(4, 3)
+  embeddingId     String?   @map("embedding_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdBy       String    @map("created_by")
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  vendor        Vendor?        @relation(fields: [vendorId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  lineItems     InvoiceLineItem[]
+  ocrMetadata   OCRMetadata?
+  payments      Payment[]
+  approvals     Approval[]
+
+  @@unique([fileHash])
+  @@index([companyId, status])
+  @@index([vendorId])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id          String   @id @default(uuid())
+  invoiceId   String   @map("invoice_id")
+  description String
+  quantity    Decimal  @default(1) @db.Decimal(12, 2)
+  unitPrice   Decimal  @default(0) @map("unit_price") @db.Decimal(18, 2)
+  amount      Decimal  @default(0) @db.Decimal(18, 2)
+  glAccount   String?  @map("gl_account")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String   @map("created_by")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_line_items")
+}
+
+model OCRMetadata {
+  id                 String   @id @default(uuid())
+  invoiceId          String   @unique @map("invoice_id")
+  rawText            String   @map("raw_text")
+  confidenceScore    Decimal  @map("confidence_score") @db.Decimal(4, 3)
+  lowConfidenceFields String[] @map("low_confidence_fields")
+  provider           String   @default("internal")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  createdBy          String   @map("created_by")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("ocr_metadata")
+}
+
+model Payment {
+  id               String    @id @default(uuid())
+  companyId        String    @map("company_id")
+  invoiceId        String    @map("invoice_id")
+  amount           Decimal   @db.Decimal(18, 2)
+  currency         String    @default("INR")
+  status           String    @default("scheduled")
+  /// PazyPay-selected settlement rail: imps | neft | rtgs
+  railType         String?   @map("rail_type")
+  /// Reference issued by our own gateway (PazyPayGateway) when the payment is initiated
+  gatewayReference String?   @unique @map("gateway_reference")
+  scheduledFor     DateTime? @map("scheduled_for")
+  bankReference    String?   @map("bank_reference")
+  failureReason    String?   @map("failure_reason")
+  idempotencyKey   String    @unique @map("idempotency_key")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdBy        String    @map("created_by")
+
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id])
+  ledgerEntries LedgerEntry[]
+
+  @@index([companyId, status])
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+/// Double-entry ledger. Every settled payment posts exactly two balanced
+/// rows (one debit, one credit) so the books always reconcile — this is
+/// PazyPay's own bookkeeping layer, not an external accounting integration.
+model LedgerEntry {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  paymentId   String   @map("payment_id")
+  account     String
+  direction   String
+  amount      Decimal  @db.Decimal(18, 2)
+  currency    String   @default("INR")
+  postedAt    DateTime @default(now()) @map("posted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String   @map("created_by")
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([companyId, account])
+  @@index([paymentId])
+  @@map("ledger_entries")
+}
+
+model CorporateCard {
+  id         String   @id @default(uuid())
+  companyId  String   @map("company_id")
+  last4      String
+  holderName String   @map("holder_name")
+  status     String   @default("active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+  createdBy  String   @map("created_by")
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  expenses Expense[]
+
+  @@index([companyId])
+  @@map("corporate_cards")
+}
+
+model Expense {
+  id              String   @id @default(uuid())
+  corporateCardId String   @map("corporate_card_id")
+  amount          Decimal  @db.Decimal(18, 2)
+  currency        String   @default("INR")
+  merchant        String
+  category        String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdBy       String   @map("created_by")
+
+  corporateCard CorporateCard @relation(fields: [corporateCardId], references: [id])
+
+  @@index([corporateCardId])
+  @@map("expenses")
+}
+
+model TaxSchedule {
+  id         String   @id @default(uuid())
+  companyId  String   @map("company_id")
+  taxType    String   @map("tax_type")
+  periodEnd  DateTime @map("period_end")
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+  createdBy  String   @map("created_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("tax_schedules")
+}
+
+model Approval {
+  id         String    @id @default(uuid())
+  entityType String    @map("entity_type")
+  entityId   String    @map("entity_id")
+  invoiceId  String?   @map("invoice_id")
+  tier       Int
+  approverId String    @map("approver_id")
+  status     String    @default("pending")
+  decidedAt  DateTime? @map("decided_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+  createdBy  String    @map("created_by")
+
+  approver Employee @relation(fields: [approverId], references: [id])
+  invoice  Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([approverId, status])
+  @@map("approvals")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  eventType   String   @map("event_type")
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  actorType   String   @map("actor_type")
+  actorId     String   @map("actor_id")
+  payload     Json
+  occurredAt  DateTime @map("occurred_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, entityType, entityId])
+  @@index([eventType])
+  @@map("audit_logs")
+}
+
+/// Nodes in the Company Intelligence Knowledge Graph. Embeddings live in a
+/// separate `pgvector` column so semantic search can run independently of
+/// the graph traversal queries.
+model KnowledgeGraphNode {
+  id         String                 @id @default(uuid())
+  companyId  String                 @map("company_id")
+  nodeType   String                 @map("node_type")
+  entityId   String                 @map("entity_id")
+  label      String
+  embedding  Unsupported("vector(1536)")?
+  createdAt  DateTime               @default(now()) @map("created_at")
+  updatedAt  DateTime               @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  edgesFrom KnowledgeGraphEdge[] @relation("EdgeFrom")
+  edgesTo   KnowledgeGraphEdge[] @relation("EdgeTo")
+
+  @@index([companyId, nodeType, entityId])
+  @@map("knowledge_graph_nodes")
+}
+
+model KnowledgeGraphEdge {
+  id         String   @id @default(uuid())
+  fromNodeId String   @map("from_node_id")
+  toNodeId   String   @map("to_node_id")
+  relation   String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  fromNode KnowledgeGraphNode @relation("EdgeFrom", fields: [fromNodeId], references: [id])
+  toNode   KnowledgeGraphNode @relation("EdgeTo", fields: [toNodeId], references: [id])
+
+  @@index([fromNodeId])
+  @@index([toNodeId])
+  @@map("knowledge_graph_edges")
+}

@@ -1,0 +1,40 @@
+{
+  "name": "pazy-pro",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PazyPro — The Autonomous Finance Operating System",
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @pazy-pro/web dev & pnpm --filter @pazy-pro/api dev",
+    "dev:web": "pnpm --filter @pazy-pro/web dev",
+    "dev:api": "pnpm --filter @pazy-pro/api dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "prisma:generate": "pnpm --filter @pazy-pro/database prisma:generate",
+    "prisma:migrate": "pnpm --filter @pazy-pro/database prisma:migrate",
+    "prisma:seed": "pnpm --filter @pazy-pro/database prisma:seed",
+    "prisma:studio": "pnpm --filter @pazy-pro/database prisma:studio",
+    "infra:up": "docker-compose -f infra/docker/docker-compose.yml up -d",
+    "infra:down": "docker-compose -f infra/docker/docker-compose.yml down",
+    "infra:logs": "docker-compose -f infra/docker/docker-compose.yml logs -f"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "msgpackr-extract",
+      "prisma",
+      "vue-demi"
+    ]
+  }
+}

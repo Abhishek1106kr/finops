@@ -1,0 +1,21 @@
+{
+  "name": "@pazy-pro/events",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pazy-pro/types": "workspace:*",
+    "bullmq": "^5.13.2",
+    "ioredis": "^5.4.1",
+    "redlock": "^5.0.0-beta.2",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
