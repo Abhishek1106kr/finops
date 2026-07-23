@@ -46,7 +46,7 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
         totalAmount: Number(inv.totalAmount),
         currency: inv.currency,
         fileUrl: inv.fileUrl,
-        createdAt: inv.createdAt.toISOString(),
+        createdAt: new Date(inv.createdAt).toISOString(),
       }));
     },
   );
@@ -74,7 +74,7 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
         totalAmount: Number(inv.totalAmount),
         currency: inv.currency,
         fileUrl: inv.fileUrl,
-        createdAt: inv.createdAt.toISOString(),
+        createdAt: new Date(inv.createdAt).toISOString(),
       };
     },
   );
@@ -106,7 +106,7 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
           totalAmount: Number(existing.totalAmount),
           currency: existing.currency,
           fileUrl: existing.fileUrl,
-          createdAt: existing.createdAt.toISOString(),
+          createdAt: new Date(existing.createdAt).toISOString(),
         };
       }
 
@@ -156,7 +156,7 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
         totalAmount: Number(invoice.totalAmount),
         currency: invoice.currency,
         fileUrl: invoice.fileUrl,
-        createdAt: invoice.createdAt.toISOString(),
+        createdAt: new Date(invoice.createdAt).toISOString(),
       };
     },
   );

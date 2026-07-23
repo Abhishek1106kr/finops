@@ -53,7 +53,7 @@ export const approvalRoutes: FastifyPluginAsync = async (app) => {
           invoiceId: a.invoiceId,
           tier: a.tier,
           status: a.status,
-          createdAt: a.createdAt.toISOString(),
+          createdAt: new Date(a.createdAt).toISOString(),
         })),
         meta: { count: approvals.length },
       };
@@ -113,7 +113,7 @@ export const approvalRoutes: FastifyPluginAsync = async (app) => {
           invoiceId: approval.invoiceId,
           tier: approval.tier,
           status: approval.status,
-          createdAt: approval.createdAt.toISOString(),
+          createdAt: new Date(approval.createdAt).toISOString(),
         },
       };
     },
