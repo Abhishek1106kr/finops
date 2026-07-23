@@ -9,7 +9,6 @@ const navLinks = [
   { label: "Payments", to: "/payments" },
   { label: "Vendors", to: "/vendors" },
   { label: "Budgets", to: "/budgets" },
-  { label: "Feature Board", to: "/featureboard" },
 ];
 </script>
 
