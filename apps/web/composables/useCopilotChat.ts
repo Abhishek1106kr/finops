@@ -5,17 +5,12 @@ export interface CopilotMessage {
   content: string;
 }
 
-/**
- * Drives POST /api/v1/ai/chat, which streams Server-Sent Events rather than
- * a single JSON body. `EventSource` can't send a POST body, so this parses
- * the `event:`/`data:` frames off a manually-read fetch stream instead.
- */
 export function useCopilotChat() {
   const messages = ref<CopilotMessage[]>([]);
   const isStreaming = ref(false);
   const error = ref<string | null>(null);
 
-  async function send(userMessage: string) {
+  async function send(userMessage: string, screenContext?: string) {
     const { apiBase } = useApi();
     error.value = null;
     const history = messages.value.slice(-20);
@@ -28,7 +23,7 @@ export function useCopilotChat() {
       const response = await fetch(`${apiBase}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, history }),
+        body: JSON.stringify({ message: userMessage, screenContext, history }),
       });
       if (!response.body) throw new Error("No response stream");
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Sparkle, Bell } from "lucide-vue-next";
+import CuteAiAssistant from "~/components/ui/CuteAiAssistant.vue";
 
 const navLinks = [
   { label: "Dashboard", to: "/dashboard" },
@@ -8,11 +9,12 @@ const navLinks = [
   { label: "Payments", to: "/payments" },
   { label: "Vendors", to: "/vendors" },
   { label: "Budgets", to: "/budgets" },
+  { label: "Feature Board", to: "/featureboard" },
 ];
 </script>
 
 <template>
-  <div class="min-h-screen bg-bg-primary text-text-primary">
+  <div class="min-h-screen bg-bg-primary text-text-primary relative">
     <header class="mx-auto flex max-w-content items-center justify-between px-10 pt-8">
       <NuxtLink to="/dashboard" class="flex items-center gap-2">
         <Sparkle class="h-5 w-5" :stroke-width="1.5" />
@@ -42,5 +44,8 @@ const navLinks = [
     <main class="mx-auto max-w-content px-10 py-12">
       <slot />
     </main>
+
+    <!-- Cute Floating AI Assistant (Bottom-Right Corner) -->
+    <CuteAiAssistant />
   </div>
 </template>
