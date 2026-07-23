@@ -17,6 +17,7 @@ import { approvalRoutes } from "./routes/approvals";
 import { paymentRoutes } from "./routes/payments";
 import { demoRoutes } from "./routes/demo";
 import { aiRoutes } from "./routes/ai";
+import { mockApiRoutes } from "./routes/mockApi";
 
 export async function buildApp() {
   const logger = createLogger("api");
@@ -51,6 +52,7 @@ export async function buildApp() {
   await app.register(paymentRoutes, { prefix: "/api/v1" });
   await app.register(demoRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1" });
+  await app.register(mockApiRoutes, { prefix: "/api/v1" });
 
   return app;
 }

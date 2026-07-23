@@ -16,23 +16,38 @@ monorepo layout. This doc tracks what's actually implemented vs. planned.
   BullMQ queue helpers with retry/backoff defaults, and Redlock-based
   distributed locking for payment/budget mutations. See ADR-0001.
 - `libs/logging` — Shared Pino logger factory.
+- `libs/ai` — lightweight `AgentGraph` runner plus Vendor Agent (GST/PAN
+  validation, blacklist, risk score) and Risk Agent (duplicate invoice /
+  split-invoicing detection).
+- `services/payment-engine` — PazyPro's own payout gateway (`PazyPayGateway`):
+  IMPS/NEFT/RTGS rail selection, HMAC-signed webhook contract, double-entry
+  ledger postings. See ADR for design rationale.
 - `apps/api` — Fastify + Zod (fastify-type-provider-zod) + Swagger. Routes:
-  `/healthz`, `/readyz`, and the Invoice ingestion slice
-  (`POST/GET /api/v1/invoices`). Background worker: `invoice-ocr`.
+  `/healthz`, `/readyz`, `invoices`, `vendors`, `approvals`, `payments`
+  (+ gateway webhook), `demo` (seed data), and `POST /api/v1/ai/chat` — the
+  Finance Brain copilot, streamed via SSE, calling Groq's `llama-3.3-70b-versatile`
+  through the official `groq-sdk`, grounded in a live DB snapshot. Workers:
+  `invoice-ocr`, `invoice-matching`, `vendor-verification`, `risk-scoring`,
+  `payment-execution`, `payment-gateway-callback`. `src/realtime.ts` attaches
+  Socket.IO to the API's HTTP server and tails the Redis Streams event mesh,
+  rebroadcasting every domain event to connected browsers over `/realtime`.
 - `apps/web` — Nuxt 3 + Tailwind (shared preset) + Pinia/VueUse/TanStack
-  Query. Pages: `/dashboard`, `/invoices` (+ detail), stubs for
-  `/inbox`, `/payments`, `/vendors`, `/budgets`, `/ai`.
+  Query + Motion One + ECharts (`vue-echarts`). Pages: `/dashboard` (live
+  metrics, cash-flow chart, forecast, AI Copilot panel, real-time activity
+  feed via Socket.IO), `/invoices` (+ detail), `/payments`, `/vendors`,
+  `/inbox`, `/ai` (full Finance Brain chat), `/budgets`. `components/ui/`
+  holds hand-rolled shadcn-vue-style primitives (Card/Button/Badge/Skeleton,
+  `class-variance-authority` + `cn()`) themed off the existing design tokens.
 - `infra/docker/docker-compose.yml` — Postgres (`pgvector/pgvector:pg16`),
   Redis, RedisInsight for local dev.
 
 ## Not yet implemented
 - Auth/RBAC (`libs/auth`) — routes currently use a hardcoded demo company/user.
 - Blob storage for uploaded files (currently a placeholder URL).
-- `invoice-matching`, `vendor-verification`, `risk-scoring`,
-  `payment-execution`, `forecast-refresh` workers (queues are defined, no
-  processors yet beyond `invoice-ocr`).
-- The other 10 AI Agents (skills.md §9) — only a mock "Invoice Agent" OCR step
-  exists; no LangGraph orchestration yet.
+- `forecast-refresh` worker (queue defined, no processor).
+- The remaining AI Agents beyond Vendor/Risk (skills.md §9) — no LangGraph
+  orchestration yet, and no tool-calling in the Finance Brain chat endpoint
+  (it's grounded by a DB snapshot in the system prompt, not live queries).
 - OpenTelemetry tracing, Prometheus metrics, Grafana/Loki wiring.
 - CI beyond lint/typecheck (`.github/workflows/ci.yml`).
 

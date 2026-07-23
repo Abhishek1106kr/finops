@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 import { prisma } from "@pazy-pro/database";
 import { createLogger } from "@pazy-pro/logging";
 
@@ -11,6 +11,8 @@ const ChatMessage = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string(),
 });
+
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 const SYSTEM_PROMPT = `You are the Finance Brain — PazyPro's autonomous finance copilot.
 Core philosophy: don't just report numbers, explain what they mean for the business and what
@@ -47,9 +49,9 @@ async function buildContextSnapshot(companyId: string) {
  * Finance Brain chat endpoint. Streams over Server-Sent Events rather than
  * the JSON envelope the rest of the API uses, since token-by-token delivery
  * is the point — the route hijacks the reply and writes `event:`/`data:`
- * frames directly. Calls Claude via the official Anthropic SDK per
- * CLAUDE.md's AI layer; requires `ANTHROPIC_API_KEY` (apps/api/.env) — with
- * no key set it degrades to a clear SSE error frame instead of a 500.
+ * frames directly. Calls Groq's OpenAI-compatible chat-completions API via
+ * the official `groq-sdk`; requires `GROQ_API_KEY` (apps/api/.env) — with no
+ * key set it degrades to a clear SSE error frame instead of a 500.
  */
 export const aiRoutes: FastifyPluginAsync = async (app) => {
   const server = app.withTypeProvider<ZodTypeProvider>();
@@ -75,35 +77,42 @@ export const aiRoutes: FastifyPluginAsync = async (app) => {
         reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
       };
 
-      const apiKey = process.env.ANTHROPIC_API_KEY;
+      const apiKey = process.env.GROQ_API_KEY;
       if (!apiKey) {
         send("error", {
-          message: "ANTHROPIC_API_KEY is not configured. Set it in apps/api/.env to enable the Finance Brain copilot.",
+          message: "GROQ_API_KEY is not configured. Set it in apps/api/.env to enable the Finance Brain copilot.",
         });
         reply.raw.end();
         return;
       }
 
       const { message, history } = req.body;
-      const client = new Anthropic({ apiKey });
+      const groq = new Groq({ apiKey });
 
       try {
         const snapshot = await buildContextSnapshot(DEMO_COMPANY_ID);
-        const stream = client.messages.stream({
-          model: "claude-opus-4-8",
+        const stream = await groq.chat.completions.create({
+          model: GROQ_MODEL,
+          temperature: 0.3,
           max_tokens: 1024,
-          thinking: { type: "adaptive" },
-          output_config: { effort: "medium" },
-          system: `${SYSTEM_PROMPT}\n\nLive company snapshot (JSON):\n${JSON.stringify(snapshot)}`,
+          stream: true,
           messages: [
+            {
+              role: "system",
+              content: `${SYSTEM_PROMPT}\n\nLive company snapshot (JSON):\n${JSON.stringify(snapshot)}`,
+            },
             ...history.map((m) => ({ role: m.role, content: m.content })),
             { role: "user" as const, content: message },
           ],
         });
 
-        stream.on("text", (delta) => send("token", { delta }));
-        const final = await stream.finalMessage();
-        send("done", { stopReason: final.stop_reason });
+        let finishReason: string | null = null;
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content;
+          if (delta) send("token", { delta });
+          if (chunk.choices[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+        }
+        send("done", { stopReason: finishReason });
       } catch (err) {
         logger.error({ err }, "ai.chat.failed");
         send("error", { message: err instanceof Error ? err.message : "Unknown error" });
