@@ -46,7 +46,7 @@ export const approvalRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         success: true as const,
-        data: approvals.map((a) => ({
+        data: approvals.map((a: any) => ({
           id: a.id,
           entityType: a.entityType,
           entityId: a.entityId,
@@ -96,9 +96,6 @@ export const approvalRoutes: FastifyPluginAsync = async (app) => {
         },
       );
 
-      // Single-tier approval today (skills.md's multi-tier chain is a
-      // follow-up): granting an invoice approval is final, so it moves
-      // straight to approved and auto-schedules the payout.
       if (approval.entityType === "invoice" && approval.invoiceId) {
         await prisma.invoice.update({
           where: { id: approval.invoiceId },

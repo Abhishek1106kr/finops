@@ -49,16 +49,16 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         success: true as const,
-        data: payments.map((p) => ({
+        data: payments.map((p: any) => ({
           id: p.id,
           invoiceId: p.invoiceId,
           amount: Number(p.amount),
           currency: p.currency,
           status: p.status,
-          scheduledFor: p.scheduledFor ? p.scheduledFor.toISOString() : null,
+          scheduledFor: p.scheduledFor ? new Date(p.scheduledFor).toISOString() : null,
           bankReference: p.bankReference,
           idempotencyKey: p.idempotencyKey,
-          createdAt: p.createdAt.toISOString(),
+          createdAt: new Date(p.createdAt).toISOString(),
         })),
         meta: { count: payments.length },
       };
@@ -85,7 +85,6 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       const { invoiceId, amount, beneficiaryAccount, beneficiaryIfsc } = req.body;
       const idempotencyKey = `pay:${invoiceId}:${Date.now()}`;
 
-      // Initiate payout via PazyPayGateway (selects IMPS / NEFT / RTGS settlement rail)
       const initResult = gateway.initiate({
         paymentId: idempotencyKey,
         amount,
@@ -94,7 +93,6 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         beneficiaryIfsc,
       });
 
-      // Simulate settlement outcome
       const outcome = gateway.simulateSettlement();
       const isSettled = outcome.outcome === "settled";
       const bankRef = isSettled ? outcome.bankReference : initResult.gatewayReference;
@@ -113,7 +111,6 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         },
       });
 
-      // Update invoice status if completed
       if (isSettled) {
         await prisma.invoice.update({
           where: { id: invoiceId },
@@ -146,10 +143,10 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
           amount: Number(payment.amount),
           currency: payment.currency,
           status: payment.status,
-          scheduledFor: payment.scheduledFor ? payment.scheduledFor.toISOString() : null,
+          scheduledFor: payment.scheduledFor ? new Date(payment.scheduledFor).toISOString() : null,
           bankReference: payment.bankReference,
           idempotencyKey: payment.idempotencyKey,
-          createdAt: payment.createdAt.toISOString(),
+          createdAt: new Date(payment.createdAt).toISOString(),
         },
       };
     },

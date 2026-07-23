@@ -54,7 +54,7 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         success: true as const,
-        data: vendors.map((v) => ({
+        data: vendors.map((v: any) => ({
           id: v.id,
           name: v.name,
           gstin: v.gstin,
@@ -62,7 +62,7 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
           status: v.status,
           riskScore: v.riskScore ? Number(v.riskScore) : null,
           blacklisted: v.blacklisted,
-          createdAt: v.createdAt.toISOString(),
+          createdAt: new Date(v.createdAt).toISOString(),
         })),
         meta: { count: vendors.length },
       };
@@ -130,7 +130,7 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
           status: vendor.status,
           riskScore: vendor.riskScore ? Number(vendor.riskScore) : null,
           blacklisted: vendor.blacklisted,
-          createdAt: vendor.createdAt.toISOString(),
+          createdAt: new Date(vendor.createdAt).toISOString(),
         },
       };
     },

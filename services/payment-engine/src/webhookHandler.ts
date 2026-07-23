@@ -16,14 +16,6 @@ export interface GatewayCallbackPayload {
 
 const TERMINAL_STATUSES = new Set(["completed", "failed"]);
 
-/**
- * Single entry point for gateway callbacks, whether they arrive over HTTP
- * (`POST /api/v1/payments/webhook`, real deployment) or via the in-process
- * BullMQ simulation queue (local dev, no real bank to call us back).
- * Idempotent: a payment already in a terminal state is a no-op, so replayed
- * or duplicate callbacks (BullMQ at-least-once, or a real gateway's retries)
- * can never double-post ledger entries.
- */
 export async function handleGatewayCallback(
   payload: GatewayCallbackPayload,
   signature: string,
@@ -42,7 +34,7 @@ export async function handleGatewayCallback(
   }
 
   if (payload.outcome === "settled") {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.payment.update({
         where: { id: payment.id },
         data: { status: "completed", bankReference: payload.bankReference },

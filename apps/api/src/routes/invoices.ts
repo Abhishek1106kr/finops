@@ -16,14 +16,8 @@ const InvoiceResponse = z.object({
   createdAt: z.string(),
 });
 
-/**
- * Invoice ingestion vertical slice: upload → InvoiceUploaded event →
- * invoice-ocr queue job. Downstream stages (parsing, matching, approval)
- * are driven entirely by the event mesh, not by this route.
- */
 export const invoiceRoutes: FastifyPluginAsync = async (app) => {
   const server = app.withTypeProvider<ZodTypeProvider>();
-  // TODO: replace with authenticated company/user context (libs/auth).
   const DEMO_COMPANY_ID = "00000000-0000-0000-0000-000000000001";
   const DEMO_USER_ID = "00000000-0000-0000-0000-000000000099";
 
@@ -45,7 +39,7 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: "desc" },
         take: 50,
       });
-      return invoices.map((inv) => ({
+      return invoices.map((inv: any) => ({
         id: inv.id,
         status: inv.status,
         invoiceNumber: inv.invoiceNumber,
@@ -102,8 +96,6 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
       const buffer = await file.toBuffer();
       const fileHash = createHash("sha256").update(buffer).digest("hex");
 
-      // Idempotency at the storage layer: re-uploading the same bytes
-      // returns the existing invoice instead of creating a duplicate.
       const existing = await prisma.invoice.findUnique({ where: { fileHash } });
       if (existing) {
         reply.status(201);
@@ -118,7 +110,6 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
         };
       }
 
-      // TODO: stream `buffer` to blob storage (S3) instead of a fake URL.
       const fileUrl = `https://storage.pazypro.local/invoices/${fileHash}/${file.filename}`;
 
       const invoice = await prisma.invoice.create({

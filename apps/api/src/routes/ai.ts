@@ -46,20 +46,20 @@ async function buildRAGContext(companyId: string, screenContext?: string) {
   return {
     activeScreenContext: screenContext ?? "User is browsing PazyPro FinanceOS",
     ragIntelligence: {
-      recentInvoices: invoices.map((i) => ({
+      recentInvoices: invoices.map((i: any) => ({
         id: i.id,
         invoiceNumber: i.invoiceNumber,
         amount: Number(i.totalAmount),
         status: i.status,
         ocrConfidence: i.ocrConfidence ? Number(i.ocrConfidence) : null,
       })),
-      recentPayments: payments.map((p) => ({
+      recentPayments: payments.map((p: any) => ({
         id: p.id,
         amount: Number(p.amount),
         status: p.status,
         bankRef: p.bankReference,
       })),
-      vendors: vendors.map((v) => ({
+      vendors: vendors.map((v: any) => ({
         name: v.name,
         gstin: v.gstin,
         riskScore: v.riskScore ? Number(v.riskScore) : null,
@@ -115,6 +115,10 @@ export const aiRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
+      const origin = req.headers.origin ?? "*";
+      reply.raw.setHeader("Access-Control-Allow-Origin", origin);
+      reply.raw.setHeader("Access-Control-Allow-Credentials", "true");
+      reply.raw.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
       reply.raw.setHeader("Content-Type", "text/event-stream");
       reply.raw.setHeader("Cache-Control", "no-cache");
       reply.raw.setHeader("Connection", "keep-alive");
@@ -125,10 +129,11 @@ export const aiRoutes: FastifyPluginAsync = async (app) => {
       };
 
       const { message, screenContext, history } = req.body;
-      const apiKey = process.env.GROQ_API_KEY;
+      const rawApiKey = process.env.GROQ_API_KEY;
+      const apiKey = rawApiKey ? rawApiKey.replace(/^"|"$/g, "").trim() : undefined;
+
       const ragSnapshot = await buildRAGContext(DEMO_COMPANY_ID, screenContext);
 
-      // Always fallback gracefully if GROQ_API_KEY is not configured or throws
       if (!apiKey) {
         const answer = synthesizeIntelligentAnswer(message, ragSnapshot);
         for (const token of answer.split(" ")) {
@@ -165,7 +170,6 @@ export const aiRoutes: FastifyPluginAsync = async (app) => {
         send("done", { stopReason: finishReason });
       } catch (err) {
         logger.error({ err }, "ai.chat.fallback_engaged");
-        // Fallback synthesizer on Groq error
         const fallbackAnswer = synthesizeIntelligentAnswer(message, ragSnapshot);
         for (const token of fallbackAnswer.split(" ")) {
           send("token", { delta: `${token} ` });

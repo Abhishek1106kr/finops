@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { useRoute } from "vue-router";
-import { X, Send, Loader2, Sparkles } from "lucide-vue-next";
+import { X, Send, Loader2, Sparkles, HelpCircle } from "lucide-vue-next";
 import { useCopilotChat } from "~/composables/useCopilotChat";
 
 const route = useRoute();
@@ -57,11 +57,64 @@ const currentScreenLabel = computed(() => {
   return `View (${path})`;
 });
 
-const quickPrompts = [
-  "Analyze active screen content 🔍",
-  "Search RAG invoices & payments 🧠",
-  "What needs my immediate sign-off? ⚡",
-];
+// Dynamic page-tailored projected questions
+const activePrompts = computed(() => {
+  const path = route.path;
+  if (path === "/invoices") {
+    return [
+      "Why is INV-2026-0891 flagged by Risk Agent? 🚩",
+      "What is our average OCR confidence score? 📄",
+      "Show PO 3-way matching status for CloudScale 🔍",
+    ];
+  }
+  if (path === "/payments") {
+    return [
+      "Which rail was chosen for CloudScale (IMPS/NEFT/RTGS)? 💳",
+      "What is the bank UTR clearance status? 🏦",
+      "How are instant payouts processed? ⚡",
+    ];
+  }
+  if (path === "/vendors") {
+    return [
+      "What is Acme Logistics' GSTIN status & risk score? 🏢",
+      "Show verified vs unverified vendors 🛡️",
+      "How is vendor risk score evaluated? 📊",
+    ];
+  }
+  if (path === "/budgets") {
+    return [
+      "Which department is closest to 2026-Q3 limit? 📈",
+      "Show active POs linked to Engineering ⚙️",
+      "How does 3-way matching work with budgets? 🤝",
+    ];
+  }
+  if (path === "/contracts") {
+    return [
+      "Which agreements have auto-renewal clauses? 📜",
+      "What are the SLA uptime guarantees for CloudScale? ⏱️",
+      "How does pgvector semantic search index contract clauses? 🧠",
+    ];
+  }
+  if (path === "/cash-flow") {
+    return [
+      "What is our 30-day projected cash balance? 💰",
+      "How is the 18.4 month runway burn rate calculated? 🚀",
+      "Show inflow vs payout outflow forecast 📊",
+    ];
+  }
+  if (path === "/audit") {
+    return [
+      "Who performed the PaymentCompleted event for pay-701? 📜",
+      "Show event lineage for VendorCreated 🔗",
+      "How is audit log synced to Redis Streams? ⚡",
+    ];
+  }
+  return [
+    "Analyze active screen content 🔍",
+    "Search RAG invoices & payments 🧠",
+    "What needs my immediate sign-off? ⚡",
+  ];
+});
 
 async function submitPrompt(text?: string) {
   const value = (text ?? input.value).trim();
@@ -94,11 +147,8 @@ async function submitPrompt(text?: string) {
 
       <!-- Cute Animated Dollar Mascot SVG with Mouse-Tracking Eyes -->
       <div class="relative w-14 h-14 transition-transform group-hover:scale-110 active:scale-95 drop-shadow-lg">
-        <svg
-          viewBox="0 0 100 100"
-          class="w-full h-full overflow-visible"
-        >
-          <!-- Dollar Mascot Body Outer Shadow & Stroke -->
+        <svg viewBox="0 0 100 100" class="w-full h-full overflow-visible">
+          <!-- Body -->
           <path
             d="M 50,6 C 36,6 30,16 30,24 C 30,30 35,35 44,38 L 44,42 C 34,44 24,50 24,62 C 24,76 36,84 50,86 L 50,94 C 50,96 52,96 52,94 L 52,86 C 66,84 76,74 76,62 C 76,52 68,46 56,42 L 56,38 C 64,36 70,30 70,22 C 70,10 58,6 50,6 Z"
             fill="#FFCB47"
@@ -107,8 +157,6 @@ async function submitPrompt(text?: string) {
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-
-          <!-- Inner Dollar Curve Accents -->
           <path
             d="M 50,12 C 40,12 36,18 36,24 C 36,30 42,34 50,36 C 60,38 64,44 64,52 C 64,62 54,68 50,68 C 40,68 34,62 34,56"
             fill="none"
@@ -116,28 +164,15 @@ async function submitPrompt(text?: string) {
             stroke-width="4.5"
             stroke-linecap="round"
           />
+          <!-- Glossy Highlights -->
+          <path d="M 38,14 C 42,10 48,10 50,10" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+          <path d="M 30,54 C 28,60 30,68 34,72" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
 
-          <!-- Glossy White Highlights -->
-          <path
-            d="M 38,14 C 42,10 48,10 50,10"
-            fill="none"
-            stroke="#FFFFFF"
-            stroke-width="3"
-            stroke-linecap="round"
-          />
-          <path
-            d="M 30,54 C 28,60 30,68 34,72"
-            fill="none"
-            stroke="#FFFFFF"
-            stroke-width="3"
-            stroke-linecap="round"
-          />
-
-          <!-- Cute Blushing Cheeks -->
+          <!-- Blushing Cheeks -->
           <ellipse cx="38" cy="52" rx="4.5" ry="3" fill="#FF5252" opacity="0.6" />
           <ellipse cx="62" cy="52" rx="4.5" ry="3" fill="#FF5252" opacity="0.6" />
 
-          <!-- Interactive Mouse-Tracking Eyes (Left & Right Pupils) -->
+          <!-- Mouse-Tracking Eyes -->
           <g transform="translate(38, 44)">
             <circle cx="0" cy="0" r="4.5" fill="#1A1A1A" />
             <circle :cx="pupilLeft.x" :cy="pupilLeft.y" r="2.2" fill="#FFFFFF" />
@@ -147,14 +182,8 @@ async function submitPrompt(text?: string) {
             <circle :cx="pupilRight.x" :cy="pupilRight.y" r="2.2" fill="#FFFFFF" />
           </g>
 
-          <!-- Cute Smile Mouth -->
-          <path
-            d="M 47,49 Q 50,52 53,49"
-            fill="none"
-            stroke="#1A1A1A"
-            stroke-width="2.5"
-            stroke-linecap="round"
-          />
+          <!-- Smile -->
+          <path d="M 47,49 Q 50,52 53,49" fill="none" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round" />
         </svg>
       </div>
     </div>
@@ -172,7 +201,7 @@ async function submitPrompt(text?: string) {
           </div>
           <div>
             <h3 class="text-xs font-medium text-carbon-900 flex items-center gap-1.5">
-              Pazy Bot (Finance Assistant)
+              Pazy Bot (Groq LLM Powered)
               <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             </h3>
             <p class="text-[11px] text-carbon-600 truncate max-w-[220px]">
@@ -190,20 +219,23 @@ async function submitPrompt(text?: string) {
 
       <!-- Messages Scroll Body -->
       <div ref="scrollRef" class="flex-1 p-4 space-y-3.5 overflow-y-auto bg-cream-50/50 text-xs">
-        <!-- Initial Greeting & Quick Prompts -->
+        <!-- Initial Greeting & Dynamic Page Projected Questions -->
         <div v-if="!messages.length" class="space-y-3">
           <div class="bg-white p-3.5 rounded-2xl border border-carbon-100 text-carbon-800 leading-relaxed shadow-sm">
-            👋 Hi! I'm Pazy Bot! Ask me anything about the content on your screen or query your invoices, vendors, and payments using RAG embeddings.
+            👋 Hi! I'm Pazy Bot powered by Groq LLM & RAG embeddings! I can answer questions tailored to <strong>{{ currentScreenLabel }}</strong>.
           </div>
 
           <div class="space-y-1.5">
-            <p class="text-[11px] font-medium text-carbon-500 uppercase tracking-wider px-1">Suggested Quick Actions</p>
+            <p class="text-[11px] font-medium text-carbon-500 uppercase tracking-wider px-1 flex items-center gap-1">
+              <HelpCircle class="w-3 h-3 text-amber-600" />
+              Suggested Screen Questions
+            </p>
             <div class="flex flex-col gap-1.5">
               <button
-                v-for="prompt in quickPrompts"
+                v-for="prompt in activePrompts"
                 :key="prompt"
                 @click="submitPrompt(prompt)"
-                class="text-left bg-white hover:bg-cream-100 border border-carbon-100 text-carbon-800 px-3 py-2 rounded-xl transition-all font-medium text-xs shadow-xs"
+                class="text-left bg-white hover:bg-amber-50 border border-carbon-100 hover:border-amber-200 text-carbon-800 px-3 py-2 rounded-xl transition-all font-medium text-xs shadow-xs"
               >
                 {{ prompt }}
               </button>

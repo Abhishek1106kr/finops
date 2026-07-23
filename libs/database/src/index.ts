@@ -1,3 +1,5 @@
+export * from "@prisma/client";
+
 declare global {
   // eslint-disable-next-line no-var
   var __prisma: any | undefined;
