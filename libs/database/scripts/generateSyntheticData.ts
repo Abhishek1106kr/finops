@@ -94,6 +94,15 @@ async function main() {
   try {
     await client.query("BEGIN");
 
+    // Idempotent: clears prior synthetic runs so re-running doesn't
+    // accumulate duplicates. Safe on a dedicated dev database only.
+    await client.query(`TRUNCATE TABLE
+      audit_logs, ledger_entries, payments, approvals, ocr_metadata,
+      invoice_line_items, invoices, expenses, corporate_cards, tax_schedules,
+      purchase_orders, budgets, contracts, vendor_bank_accounts, vendors,
+      employees, departments, companies
+      RESTART IDENTITY CASCADE`);
+
     const now = new Date();
     const systemUser = "system:synthetic-data-generator";
 
@@ -562,15 +571,19 @@ async function main() {
     }));
     await bulkInsert(client, "tax_schedules", ["id", "company_id", "tax_type", "period_end", "status", "created_at", "updated_at", "created_by"], taxRows);
 
-    // ── Supplemental system/forecast events to reach the audit-log target ─
-    let day = 0;
-    while (auditLog.length < cfg.targetAuditLogs && day < HORIZON_DAYS) {
-      const at = addDays(now, -day);
+    // ── Supplemental system/forecast events to reach the audit-log target.
+    // Cycles through the horizon as many times as needed (not just once)
+    // since business-event volume alone rarely reaches the target at
+    // smaller scales.
+    while (auditLog.length < cfg.targetAuditLogs) {
+      const at = randomRecentDate(HORIZON_DAYS);
       recordEvent(companyId, "ForecastUpdated", "forecast", randomUUID(), at, { horizonDays: 30, projectedBalance: randomInt(1_00_00_000, 5_00_00_000) }, "agent", "forecast-agent");
       if (auditLog.length < cfg.targetAuditLogs) {
         recordEvent(companyId, "ReminderTriggered", "approval", pick(employeeIds), at, { channel: pick(["slack", "email"]) }, "system", "notification-agent");
       }
-      day++;
+      if (auditLog.length < cfg.targetAuditLogs) {
+        recordEvent(companyId, "WebhookRecovered", "webhook", randomUUID(), at, { targetUrl: `https://erp.cloudscale.internal/webhooks/${randomUUID()}`, attempt: randomInt(1, 3) }, "system", "erp-sync");
+      }
     }
 
     console.log(`  audit_logs: generating ${auditLog.length} events...`);
