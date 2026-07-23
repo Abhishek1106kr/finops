@@ -14,6 +14,7 @@
     "build": "pnpm -r build",
     "build:web": "pnpm --filter @pazy-pro/web build",
     "build:api": "pnpm --filter @pazy-pro/api build",
+    "start": "node apps/web/.output/server/index.mjs",
     "start:web": "node apps/web/.output/server/index.mjs",
     "start:api": "node apps/api/dist/server.js",
     "test": "pnpm -r test",
