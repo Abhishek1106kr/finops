@@ -19,9 +19,9 @@ datasource db {
 model Company {
   id          String   @id @default(uuid())
   name        String
-  legalName   String
+  legalName   String   @map("legal_name")
   gstin       String?
-  baseCurrency String  @default("INR")
+  baseCurrency String  @default("INR") @map("base_currency")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")

@@ -2,32 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* UI.md Design System Tokens */
+  --bg-primary: #FAF7F2;
+  --bg-secondary: #F3EFEA;
+  --bg-surface-white: #FFFFFF;
+
+  --text-primary: #121212;
+  --text-secondary: #5A5A5C;
+  --text-muted: #8C8C8E;
+  --text-inverse: #FFFFFF;
+
+  --accent-lavender: #F3E6F7;
+  --accent-lavender-border: #E8D3EE;
+  --accent-sage: #C7E8BC;
+  --accent-sage-border: #B2DEA4;
+  --accent-subtle-yellow: #FFF7D6;
+
+  --btn-primary-bg: #121212;
+  --btn-primary-hover: #2D2D2D;
+
+  --font-family-sans: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
 @layer base {
-  html {
-    background-color: theme("colors.bg.primary");
-    color: theme("colors.text.primary");
-    font-family: theme("fontFamily.sans");
+  html, body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-family-sans);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
   }
 }
 
 @layer components {
   .btn-pill-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-btn-primary px-[22px] py-[10px] text-[14px] font-medium text-text-inverse transition-all duration-fast ease-fast hover:bg-btn-primary-hover hover:-translate-y-px hover:shadow-pill;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--btn-primary-bg);
+    color: var(--text-inverse);
+    font-family: var(--font-family-sans);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-pill-primary:hover {
+    background-color: var(--btn-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   .floating-pill {
-    @apply inline-flex items-center gap-[10px] rounded-md border border-border-subtle bg-bg-surface px-4 py-2 text-[13px] text-text-primary shadow-subtle;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(18, 18, 18, 0.08);
+    background-color: var(--bg-surface-white);
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-primary);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
   }
 
   .hero-card-lavender {
-    @apply relative overflow-hidden rounded-xl bg-accent-lavender p-8;
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    background-color: var(--accent-lavender);
+    padding: 32px;
   }
 
   .hero-card-sage {
-    @apply relative overflow-hidden rounded-xl bg-accent-sage;
-  }
-
-  .status-dot {
-    @apply inline-block h-2 w-2 rounded-full;
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    background-color: var(--accent-sage);
   }
 }
