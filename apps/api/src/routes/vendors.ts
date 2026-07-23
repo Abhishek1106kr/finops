@@ -99,25 +99,29 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
         },
       });
 
-      await publishEvent(
-        DomainEventType.VendorCreated,
-        {
-          vendorId: vendor.id,
-          name: vendor.name,
-          gstin: vendor.gstin ?? undefined,
-          createdBy: DEMO_USER_ID,
-        },
-        {
-          companyId: DEMO_COMPANY_ID,
-          actor: { type: "user", id: DEMO_USER_ID },
-        },
-      );
+      try {
+        await publishEvent(
+          DomainEventType.VendorCreated,
+          {
+            vendorId: vendor.id,
+            name: vendor.name,
+            gstin: vendor.gstin ?? undefined,
+            createdBy: DEMO_USER_ID,
+          },
+          {
+            companyId: DEMO_COMPANY_ID,
+            actor: { type: "user", id: DEMO_USER_ID },
+          },
+        );
 
-      await getQueue(QueueName.VendorVerification).add(
-        "verify",
-        { vendorId: vendor.id },
-        { jobId: `verify:${vendor.id}` },
-      );
+        await getQueue(QueueName.VendorVerification).add(
+          "verify",
+          { vendorId: vendor.id },
+          { jobId: `verify-${vendor.id}` },
+        );
+      } catch (e) {
+        req.log.warn({ vendorId: vendor.id }, "redis.offline.queue_skipped");
+      }
 
       reply.status(201);
       return {

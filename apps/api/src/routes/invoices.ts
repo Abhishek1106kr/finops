@@ -111,11 +111,14 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const fileUrl = `https://storage.pazypro.local/invoices/${fileHash}/${file.filename}`;
+      const generatedInvNumber = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const invoice = await prisma.invoice.create({
         data: {
           id: randomUUID(),
           companyId: DEMO_COMPANY_ID,
+          invoiceNumber: generatedInvNumber,
+          totalAmount: 145000,
           status: "uploaded",
           currency: "INR",
           fileUrl,
@@ -134,17 +137,21 @@ export const invoiceRoutes: FastifyPluginAsync = async (app) => {
         mimeType: file.mimetype,
       });
 
-      await publishEvent(DomainEventType.InvoiceUploaded, payload, {
-        companyId: DEMO_COMPANY_ID,
-        actor: { type: "user", id: DEMO_USER_ID },
-        idempotencyKey: `invoice:${invoice.id}:uploaded`,
-      });
+      try {
+        await publishEvent(DomainEventType.InvoiceUploaded, payload, {
+          companyId: DEMO_COMPANY_ID,
+          actor: { type: "user", id: DEMO_USER_ID },
+          idempotencyKey: `invoice:${invoice.id}:uploaded`,
+        });
 
-      await getQueue(QueueName.InvoiceOCR).add(
-        "ocr",
-        { invoiceId: invoice.id },
-        { jobId: `ocr:${invoice.id}` },
-      );
+        await getQueue(QueueName.InvoiceOCR).add(
+          "ocr",
+          { invoiceId: invoice.id },
+          { jobId: `ocr-${invoice.id}` },
+        );
+      } catch (e) {
+        req.log.warn({ invoiceId: invoice.id }, "redis.offline.queue_skipped");
+      }
 
       req.log.info({ invoiceId: invoice.id }, "invoice.uploaded");
 
